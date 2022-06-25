@@ -30,7 +30,6 @@ def yoomoneyNotification(request : WSGIRequest, user_id):
             shaForTest = hashlib.sha1(postStr)
 
             # Check if hash is good!
-            print(request.POST['sha1_hash'], shaForTest.hexdigest())
             if request.POST['sha1_hash'] == shaForTest.hexdigest():
                 # You're welcome, but...
                 # Maybe its test notification?
@@ -41,39 +40,27 @@ def yoomoneyNotification(request : WSGIRequest, user_id):
                 # Ok, thats not a test notification
                 # We guess that its payments http notification
                 # Working with a label, We want to know thats notif from our bot, not other such as money transfer
-                try:
-                    labelKey = str(request.POST['label']).replace('BPS', '').split('.')[0]
-                    projectId = str(request.POST['label']).replace('BPS', '').split('.')[1]
-                    secKey = deserializeSecretKey(projectId)['ym']
-                    print(labelKey)
-                    print(projectId)
-                except:
-                    return HttpResponse(status=500, content='Bad label')
+
+                labelKey = str(request.POST['label']).replace('BPS', '').split('.')[0]
+                projectId = str(request.POST['label']).replace('BPS', '').split('.')[1]
+                secKey = deserializeSecretKey(projectId)['ym']
+
                 # Wow thats a good label!
-
-                r = req(method='POST',
-                        url='https://api.telegram.org/bot5527748790:AAFdKl6ySucQ_FQWCEHGxs0KpoTbljJ8Cl0/sendMessage?',
-                        json={"chat_id": user_id,
-                              "text": str(secKey)})
-
-                r = req(method='POST',
-                        url='https://api.telegram.org/bot5527748790:AAFdKl6ySucQ_FQWCEHGxs0KpoTbljJ8Cl0/sendMessage?',
-                        json={"chat_id": user_id,
-                              "text": str(labelKey)})
 
                 # Maybe its our notif from bot??
                 if request.POST['operation_id'] != "" and request.POST['operation_id'] != "test-notification" and secKey == labelKey:
                     # Hooray! Its our notification
                     # Lets update our ymBills db
-                    ymBill = Ymbill()
-                    ymBill.bill_date = date.today()
-                    ymBill.sender = request.POST['sender']
-                    ymBill.withdraw = request.POST['amount']
-                    ymBill.extra_info = request.POST['label']
-                    ymBill.save()
-                    r = req(method='POST',
-                                url='https://api.telegram.org/bot5527748790:AAFdKl6ySucQ_FQWCEHGxs0KpoTbljJ8Cl0/sendMessage?',
-                                json={"chat_id": user_id, "text": 'Пришёл платёж'})
+                    if not Ymbill.objects.filter(extra_info=user_id).exists(str(request.POST['label'])):
+                        ymBill = Ymbill()
+                        ymBill.bill_date = date.today()
+                        ymBill.sender = request.POST['sender']
+                        ymBill.withdraw = request.POST['amount']
+                        ymBill.extra_info = request.POST['label']
+                        ymBill.save()
+                        return HttpResponse('Sucess payment')
+                    else:
+                        return HttpResponse('Are you a wizzard?!')
                     return HttpResponse('Sucess payment')
                 else:
                     # Huh... No..
