@@ -1,7 +1,7 @@
 from django.db import models
 
 # Create your models here.
-class Projects(models.Model):
+class Project(models.Model):
     project_id = models.AutoField(primary_key=True)
     project_name = models.CharField(max_length=200)
     project_type = models.CharField(max_length=15)
@@ -13,11 +13,13 @@ class Projects(models.Model):
         managed = False
         db_table = 'projects'
 
-class ProjectPasses(models.Model):
-    user_id = models.IntegerField(blank=True, null=True)
-    expiration_date = models.DateField(blank=True, null=True)
+class Ymbill(models.Model):
+    bill_id = models.AutoField(primary_key=True)
+    bill_date = models.DateField()
+    sender = models.BigIntegerField()
+    withdraw = models.FloatField()
+    extra_info = models.TextField()
 
     class Meta:
         managed = False
-        db_table = 'project_1'
-
+        db_table = 'ymbills'
