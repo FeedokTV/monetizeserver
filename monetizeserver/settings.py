@@ -86,6 +86,12 @@ DATABASES = {
     }
 }
 
+PAYEER = {
+    'ACCOUNT': 'P1073604301',
+    'API_ID': '1684240844',
+    'API_PASS': 'monetize',
+    'LANGUAGE': 'en' # optional, default: 'ru'
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

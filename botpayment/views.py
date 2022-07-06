@@ -2,9 +2,12 @@ from _sha1 import sha1
 from datetime import date
 
 from django.core.handlers.wsgi import WSGIRequest
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 # Create your views here.
+from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
+from payeer.api import payeer_api
+from payeer.constants import CURRENCY_USD
 from pip._vendor.rich import json
 from requests import request as req
 import hashlib
@@ -12,6 +15,38 @@ from botpayment.models import Project, Ymbill
 
 def payeer(request):
     return HttpResponse('1684240844')
+
+
+@csrf_exempt
+def api(request : WSGIRequest):
+    if request.method == 'GET':
+        return HttpResponse(content='Hello! Bye bye!', status=500)
+    elif request.method == 'POST':
+        if request.POST['action'] == 'YOOKASSA_PAYMENT_LINK':
+            from yookassa import Configuration, Payment
+            import uuid
+
+            Configuration.account_id = request.POST['account_id']
+            Configuration.secret_key = request.POST['secret_key']
+
+            payment_link, id = generate_yookassa_url(float(request.POST['value']))
+
+            return JsonResponse({"url": payment_link, "id": id})
+        if request.POST['action'] == 'YOOKASSA_CHECK_PAYMENT':
+            from yookassa import Configuration, Payment
+            import uuid
+
+            Configuration.account_id = request.POST['account_id']
+            Configuration.secret_key = request.POST['secret_key']
+
+            payment = Payment.find_one(payment_id=request.POST['payment_id'])
+
+            if payment.status == 'succeeded':
+                return JsonResponse({'is_payed':True})
+            else:
+                return JsonResponse({'is_payed': False})
+
+
 
 @csrf_exempt
 def yoomoneyNotification(request : WSGIRequest, user_id):
@@ -70,6 +105,33 @@ def yoomoneyNotification(request : WSGIRequest, user_id):
     else:
         return HttpResponse(status=500,content='#*$(&^#&(@*#^>:(')
 
+
+def generate_yookassa_url(value : float):
+    from yookassa import Configuration, Payment
+    import uuid
+
+    Configuration.account_id = 924840
+    Configuration.secret_key = 'test_LEwZqiKLC1FeVli7dKON9-5na5RtwGOya_u5OfwlF9s'
+
+    payment = Payment.create({
+        "amount": {
+            "value": value,
+            "currency": "RUB"
+        },
+        "confirmation": {
+            "type": "redirect",
+            "return_url": "http://185.246.67.118/"
+        },
+        "capture": True,
+        "description": "Bot order"
+    }, uuid.uuid4())
+
+
+    confirmation_url = payment.confirmation.__dict__['_ConfirmationRedirect__confirmation_url']
+    payment_id = payment.id
+
+    return confirmation_url,payment_id
+
 def get_hash_check_string(postReq : dict, user_id : int):
     config = deserializeYooMoneyConfig(user_id)
     notificationSecret = config['secret']
@@ -89,3 +151,9 @@ def deserializeSecretKey(id : int):
     secKeyJson = open(pathToConfig).read()  # opens the json file and saves the raw contents
     secKey = json.loads(secKeyJson)  # converts to a json structure
     return secKey
+
+def get_hash_check_string_payeer(postReq : dict):
+    key = 'monetize'
+    hashStr = postReq['m_operation_id'] + ':' + postReq['m_operation_ps'] + ':' + postReq['m_operation_date'] + ':' + postReq[
+        'm_operation_pay_date'] + ':' + postReq['m_shop'] + ':' + postReq['m_orderid'] + ':' + postReq[
+                  'm_amount'] + ':' + postReq['m_curr'] + ':' + postReq['m_desc'] + ':' + postReq['m_status'] + ':' + str(key)

@@ -17,10 +17,12 @@ from django.contrib import admin
 from django.template.defaulttags import url
 from django.urls import path
 
-from botpayment.views import yoomoneyNotification,payeer
+from botpayment.views import yoomoneyNotification, api
 
 urlpatterns = [
     #path('admin/', admin.site.urls),
-    path('u/<int:user_id>/yoomoney/', yoomoneyNotification)
+    path('api',api),
+    path('u/<int:user_id>/yoomoney/', yoomoneyNotification),
+
 ]
 
